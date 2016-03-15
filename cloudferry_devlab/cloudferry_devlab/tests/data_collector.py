@@ -15,6 +15,7 @@
 import ConfigParser
 import pkg_resources
 
+from keystoneclient import exceptions as ks_exceptions
 import yaml
 
 from cloudferry_devlab.tests import base
@@ -88,28 +89,51 @@ class DataCollector(object):
             collected_items['security_groups'] = [sg.__dict__['_info']
                                                   for sg in sgs]
         if 'keypairs' in resources:
-            def get_user(name):
-                for _user in users:
-                    if _user['name'] == name:
-                        return _user
+            def get_user(usr):
+                for user in users:
+                    if user['name'] != usr.name:
+                        continue
+                    if user['tenant'] not in existing_tenants:
+                        try:
+                            user['tenant'] = existing_tenants[usr.tenantId]
+                        except KeyError:
+                            raise RuntimeError(
+                                "Tenant '%s' not found" % usr.tenantId)
+                    return user
             keypairs = []
             users = self.config.users
             users.append({'name': self.cloud_info.username,
                           'password': self.cloud_info.password,
                           'tenant': self.cloud_info.tenant})
             user_names = [u['name'] for u in self.config.users]
-            existing_tenants = [t.id for t in
-                                self.cloud_info.keystoneclient.tenants.list()]
+            cloud_tenants = self.cloud_info.keystoneclient.tenants.list()
+
+            existing_tenants = {t.id: t.name for t in cloud_tenants}
+            existing_tenants.update({v: k
+                                     for k, v in existing_tenants.items()})
             for user in self.cloud_info.keystoneclient.users.list():
                 if user.name not in user_names or\
                         not getattr(user, 'tenantId', None) or\
                         not user.enabled or\
                         user.tenantId not in existing_tenants:
                     continue
-                creds = get_user(user.name)
-                self.cloud_info.switch_user(user=creds['name'],
-                                            password=creds['password'],
-                                            tenant=creds['tenant'])
+                creds = get_user(user)
+                try:
+                    self.cloud_info.switch_user(user=creds['name'],
+                                                password=creds['password'],
+                                                tenant=creds['tenant'])
+                except ks_exceptions.Unauthorized:
+                    self.cloud_info.switch_user(
+                        user=self.cloud_info.username,
+                        password=self.cloud_info.password,
+                        tenant=self.cloud_info.tenant)
+                    self.cloud_info.keystoneclient.users.update(
+                        self.cloud_info.get_user_id(creds['name']),
+                        password=creds['password'],
+                        tenant=creds['tenant'])
+                    self.cloud_info.switch_user(user=creds['name'],
+                                                password=creds['password'],
+                                                tenant=creds['tenant'])
                 kps = self.cloud_info.novaclient.keypairs.list()
                 if kps:
                     kps = [kp.__dict__['_info'] for kp in kps]
