@@ -405,10 +405,10 @@ images = [
     # CF must create new UUID during migration for this image
     # and migrate it successfully
     {'name': 'deleted_on_dst', 'id': 'e38390f0-e660-42fc-b8cd-db163fce1510',
-     'copy_from': img_url, 'disk_format': 'qcow2',
-     'container_format': 'bare', 'upload_on_dst': True, 'delete_on_dst': True},
+     'copy_from': img_url, 'disk_format': 'qcow2', 'container_format': 'bare',
+     'upload_on_dst': True, 'delete_on_dst': True},
     {'name': 'deleted_on_dst', 'copy_from': img_url, 'disk_format': 'qcow2',
-     'container_format': 'bare', 'upload_on_dst': True}
+     'container_format': 'bare', 'upload_on_dst': True, 'is_deleted': True}
 ]
 """Images to create/delete"""
 
