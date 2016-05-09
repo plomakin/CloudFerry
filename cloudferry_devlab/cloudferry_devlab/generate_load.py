@@ -173,9 +173,8 @@ class Prerequisites(base.BasePrerequisites):
                 self.novaclient.quotas.update(tenant_id=self.get_tenant_id(
                     tenant['name']), **tenant['quota'])
             if 'quota_cinder' in tenant:
-                self.cinderclient.quotas.update(
-                    tenant_id=self.get_tenant_id(tenant['name']),
-                    **tenant['quota_cinder'])
+                self.cinderclient.quotas.update(tenant_id=tenant['name'],
+                                                **tenant['quota_cinder'])
 
     def upload_image(self):
 
