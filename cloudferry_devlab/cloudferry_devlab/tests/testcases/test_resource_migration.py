@@ -538,19 +538,23 @@ class ResourceMigrationTests(functional_test.FunctionalTest):
         filtering_data = self.filtering_utils\
             .filter_vms_with_filter_config_file(src_vms)
         src_vms = filtering_data[0]
+        src_vms = [vm for vm in src_vms if vm.status != 'ERROR']
 
         def compare_vm_parameter(param, vm1, vm2):
             vm1_param = getattr(vm1, param, None)
             vm2_param = getattr(vm2, param, None)
             if param == "config_drive" and vm1_param == u'1':
                 vm1_param = u'True'
+            msgs = []
             if vm1_param != vm2_param:
                 error_msg = ('Parameter {param} for VM with name '
                              '{name} is different src: {vm1}, dst: {vm2}')
-                self.fail(error_msg.format(param=param, name=vm1.name,
-                                           vm1=getattr(vm1, param),
-                                           vm2=getattr(vm2, param)))
+                msgs.append(error_msg.format(param=param, name=vm1.name,
+                                             vm1=getattr(vm1, param),
+                                             vm2=getattr(vm2, param)))
+            return msgs
 
+        fail_msg = []
         self.set_hash_for_vms(src_vms)
         self.set_hash_for_vms(dst_vms)
         if not src_vms:
@@ -562,11 +566,14 @@ class ResourceMigrationTests(functional_test.FunctionalTest):
                 if src_vm.vm_hash != dst_vm.vm_hash:
                     continue
                 for param in parameters:
-                    compare_vm_parameter(param, src_vm, dst_vm)
+                    fail_msg.extend(compare_vm_parameter(
+                        param, src_vm, dst_vm))
                 break
             else:
                 msg = 'VM with hash %s was not found on dst'
-                self.fail(msg % str(src_vm.vm_hash))
+                fail_msg.append(msg % str(src_vm.vm_hash))
+        if fail_msg:
+            self.fail('\n'.join(fail_msg))
 
     @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
     def test_migrate_vms_with_floating(self):
