@@ -1027,6 +1027,26 @@ class Prerequisites(base.BasePrerequisites):
         self.wait_until_objects(vm_ids, self.dst_cloud.check_vm_state,
                                 conf.TIMEOUT)
 
+    def shutoff_all_vms(self):
+        for vm in self.novaclient.servers.list(search_opts={'all_tenants': 1}):
+            try:
+                if vm.status not in ('ERROR', 'SHUTOFF'):
+                    self.novaclient.servers.reset_state(vm.id, 'error')
+                    self.novaclient.servers.stop(vm.id)
+            except (nv_exceptions.Conflict, nv_exceptions.BadRequest) as e:
+                self.log.warning('There was some problems during state change:'
+                                 '\n%s', e)
+        for vm in self.dst_cloud.novaclient.servers.list(
+                search_opts={'all_tenants': 1}):
+            try:
+                if vm.status not in ('ERROR', 'SHUTOFF'):
+                    self.dst_cloud.novaclient.servers.reset_state(vm.id,
+                                                                  'error')
+                    self.dst_cloud.novaclient.servers.stop(vm.id)
+            except (nv_exceptions.Conflict, nv_exceptions.BadRequest) as e:
+                self.log.warning('There was some problems during state change:'
+                                 '\n%s', e)
+
     def create_ext_net_map_yaml(self):
         src_ext_nets = [net['name'] for net in self.config.networks
                         if net.get('router:external')]
@@ -1120,5 +1140,7 @@ class Prerequisites(base.BasePrerequisites):
 
     def run_restore_vms_state(self):
         self.init_dst_cloud()
+        self.log.info('Shutting off all of the VMs')
+        self.shutoff_all_vms()
         self.log.info('Emulating vm states')
         self.emulate_vm_states()
