@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and#
 # limitations under the License.
 
+import time
 
 import sqlalchemy
+
+from cloudferry.lib.utils import remote_runner
+
+ALL_DATABASES = "--all-databases"
 
 
 def get_db_host(cloud_config):
@@ -34,6 +39,29 @@ def get_db_host(cloud_config):
         db_host = cloud_config.migrate.mysqldump_host
 
     return db_host
+
+
+def dump_db(cloud, database=ALL_DATABASES):
+    cmd = "mysqldump {database} --user={user}"
+    if cloud.cloud_config.mysql.db_password:
+        cmd += " --password={password}"
+
+    db_host = get_db_host(cloud.cloud_config)
+    rr = remote_runner.RemoteRunner(
+        db_host, cloud.cloud_config.cloud.ssh_user,
+        password=cloud.cloud_config.cloud.ssh_sudo_password)
+    dump = rr.run(cmd,
+                  database=database,
+                  user=cloud.cloud_config.mysql.db_user,
+                  password=cloud.cloud_config.mysql.db_password)
+
+    filename = cloud.cloud_config.migrate.db_dump_filename
+    with open(filename.format(database=('all_databases'
+                                        if database == ALL_DATABASES
+                                        else database),
+                              time=time.time(),
+                              position=cloud.position), 'w') as f:
+        f.write(dump)
 
 
 class MysqlConnector(object):

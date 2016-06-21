@@ -52,7 +52,6 @@ class Cloud(object):
         cloud_config['cloud'].update(getattr(config, position))
         cloud_config['mysql'].update(getattr(config, position + '_mysql'))
         cloud_config['rabbit'].update(getattr(config, position + '_rabbit'))
-        cloud_config['snapshot'].update(config.snapshot)
         cloud_config['storage'].update(getattr(config, position + '_storage'))
         cloud_config['initial_check'].update(config.initial_check)
 

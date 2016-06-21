@@ -253,6 +253,9 @@ migrate_opts = [
                     'rules file path.'),
     cfg.BoolOpt('migrate_whole_cloud', default=False,
                 help="Migrate the whole cloud despite the filter file."),
+    cfg.StrOpt('db_dump_filename',
+               default="dump_{position}_{database}_{time}.sql",
+               help="Filename template to store a dump of a database."),
 ]
 
 
@@ -586,12 +589,6 @@ dst_network_opts = [
                      "to True, and only tenant quotas otherwise.")
 ]
 
-snapshot = cfg.OptGroup(name='snapshot',
-                        title="Rules for snapshot")
-
-snapshot_opts = [
-    cfg.StrOpt('snapshot_path', default="dump.sql")]
-
 initial_check = cfg.OptGroup(name='initial_check',
                              title='Configuration for initial checks')
 
@@ -697,7 +694,6 @@ cfg_for_reg = [
     (dst_identity, dst_identity_opts),
     (dst_image, dst_image_opts),
     (dst_network, dst_network_opts),
-    (snapshot, snapshot_opts),
     (initial_check, initial_check_opts),
     (condense, condense_opts),
     (database, database_opts),
