@@ -230,6 +230,7 @@ class VmMigration(functional_test.FunctionalTest):
                 if [True for addr in net if 'floating' in addr.values()]:
                     break
             else:
+                self.src_cloud.log.debug(vm.addresses)
                 raise RuntimeError('Vm {0} does not have floating ip'.format(
                     vm.name))
 

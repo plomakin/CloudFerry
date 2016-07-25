@@ -44,8 +44,8 @@ class KeystoneMigrationTests(functional_test.FunctionalTest):
                                                 resource_name='user',
                                                 parameter=param)
 
-    @attr(migrated_tenant=['admin', 'tenant1', 'tenant2',
-          config.case_sensitivity_test_tenant])
+    @attr(migrated_tenant=['admin', 'tenant1',
+                           config.case_sensitivity_test_tenant])
     def test_migrate_keystone_user_tenant_roles(self):
         """Validate user's tenant roles were migrated with correct name."""
         tenant = base.get_nosetest_cmd_attribute_val('migrated_tenant')

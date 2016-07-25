@@ -200,11 +200,10 @@ class MigrationUtils(object):
         return True
 
     def check_mapped_tenant(self, tenant_name, cloud_prefix=''):
-        tnt_name = tenant_name
         if cloud_prefix in ['', 'dst']:
-            tnt_name = self.config.mapped_tenant_dict.get(tenant_name,
-                                                          tenant_name)
-        return tnt_name
+            return self.config.mapped_tenant_dict.get(tenant_name, tenant_name)
+        else:
+            return tenant_name
 
     @staticmethod
     def open_ssh_port_secgroup(client, tenant_id):

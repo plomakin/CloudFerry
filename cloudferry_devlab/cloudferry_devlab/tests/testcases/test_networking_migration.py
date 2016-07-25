@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and#
 # limitations under the License.
 
+import os
 import pprint
+import unittest
+import yaml
 
 from generator import generator, generate
 from nose.plugins.attrib import attr
@@ -80,7 +83,7 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
             parameter=param)
 
     @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
-    @generate('name', 'external_gateway_info', 'status', 'admin_state_up',
+    @generate('name', 'status', 'admin_state_up',
               'routes')
     def test_migrate_neutron_routers(self, param):
         """Validate routers were migrated with correct parameters.
@@ -142,7 +145,7 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
                     self.validate_network_name_in_port_lists(
                         src_ports=src_ports, dst_ports=dst_ports)
 
-    @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
+    @attr(migrated_tenant=['tenant2'])
     def test_router_migrated_to_correct_tenant(self):
         """Validate routers were migrated to correct tenant on dst."""
         for dst_router in self.dst_routers:
@@ -152,8 +155,11 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
                 if src_router['name'] == dst_router['name']:
                     src_tenant_name = self.src_cloud.get_tenant_name(
                         src_router['tenant_id'])
-                    src_tenant_name = self.migration_utils.check_mapped_tenant(
-                        tenant_name=src_tenant_name)
+                    self.src_cloud.log.debug(src_router)
+                    self.src_cloud.log.debug(dst_router)
+                    self.src_cloud.log.debug(self.dst_cloud.config.mapped_tenant_dict)
+                    src_tenant_name = self.dst_cloud.config.mapped_tenant_dict\
+                        .get(src_tenant_name, src_tenant_name)
                     self.assertTrue(src_tenant_name == dst_tenant_name,
                                     msg='DST tenant name %s is not equal to '
                                         'SRC %s' %
@@ -171,16 +177,12 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
             src_sec_gr, dst_sec_gr, resource_name='security_groups',
             parameter=param)
 
-    @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
+    @attr(migrated_tenant=['tenant1', 'tenant2'])
     def test_floating_ips_migrated(self):
         """Validate floating IPs were migrated correctly."""
 
-        def get_fips(client):
-            return set([fip['floating_ip_address']
-                        for fip in client.list_floatingips()['floatingips']])
-
         src_fips = self.filter_floatingips()
-        dst_fips = get_fips(self.dst_cloud.neutronclient)
+        dst_fips = self.get_fips(self.dst_cloud.neutronclient)
 
         missing_fips = src_fips - dst_fips
 
@@ -188,3 +190,67 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
             self.fail("{num} floating IPs did not migrate to destination: "
                       "{fips}".format(num=len(missing_fips),
                                       fips=pprint.pformat(missing_fips)))
+
+    @attr(migrated_tenant=['admin'])
+    @generate('src', 'dst')
+    def test_mapped_floating_ips(self, param):
+        """Validate floating IPs were migrated accordingly `resource_map.yaml`
+        """
+
+        with open(os.path.join(self.cloudferry_dir,
+                               self.src_cloud.config.rsc_map_filename),
+                  'r') as f:
+            ext_net_map = yaml.load(f)['ext_network_map']
+
+        src_fips = self.filter_floatingips()
+        dst_fips = self.get_fips(self.dst_cloud.neutronclient)
+        missed_fips = []
+
+        for src_net, dst_net in ext_net_map.items():
+            if param == 'src':
+                for src_fip in src_fips:
+                    fip = self.get_fip_by_ip(self.src_cloud.neutronclient,
+                                             src_fip)
+                    if fip.get('floating_network_id') == src_net:
+                        missed_fips.append(src_fip)
+            if param == 'dst':
+                for dst_fip in dst_fips:
+                    fip = self.get_fip_by_ip(self.dst_cloud.neutronclient,
+                                             dst_fip)
+                    if fip.get('floating_network_id') == dst_net:
+                        missed_fips.append(dst_fip)
+
+        if param == 'src' and missed_fips:
+            self.fail(msg="Missed mapped fips: %s" % missed_fips)
+        elif len(missed_fips) > self.src_cloud.config.dst_unassociated_fip:
+            self.fail(msg="Missed mapped fips: %s" % missed_fips)
+
+    @unittest.skipIf(functional_test.get_option_from_config_ini(
+        option='change_router_ips') == 'False',
+        'Change router ips disabled in CloudFerry config')
+    def test_ext_router_ip_changed(self):
+        """Validate router IPs were changed after migration."""
+        dst_routers = self.dst_cloud.get_ext_routers()
+        src_routers = self.src_cloud.get_ext_routers()
+        routers_with_same_gateway = []
+        for dst_router in dst_routers:
+            for src_router in src_routers:
+                if dst_router['name'] != src_router['name']:
+                    continue
+                src_gateway = self.src_cloud.neutronclient.list_ports(
+                    device_id=src_router['id'],
+                    device_owner='network:router_gateway')['ports'][0]
+                dst_gateway = self.dst_cloud.neutronclient.list_ports(
+                    device_id=dst_router['id'],
+                    device_owner='network:router_gateway')['ports'][0]
+                if src_gateway['fixed_ips'][0]['ip_address'] == \
+                        dst_gateway['fixed_ips'][0]['ip_address']:
+                    routers_with_same_gateway.append((dst_router['name'],
+                                                      dst_gateway['fixed_ips']
+                                                      [0]['ip_address']))
+        if routers_with_same_gateway:
+            self.fail(msg='GW ip addresses of routers "{0}" are same on src '
+                          'and dst: {1}'.format([x[0] for x in
+                                                 routers_with_same_gateway],
+                                                [x[1] for x in
+                                                 routers_with_same_gateway]))

@@ -86,10 +86,6 @@ mapped_tenant_dict = {'tenant2': 'tenant2_mapped_in_resource_map_yaml'}
 """SRC to DST Mapped Tenant Dictionary where key is SRC tenant name
 and value is the corresponding DST tenant name"""
 
-ext_net_map = 'ext_net_map.yaml'
-"""This file contains map of relationships between external networks on source
-and destination clouds."""
-
 case_sensitivity_test_user = 'user10'
 """User to be created in upper case on DST Cloud."""
 
@@ -560,7 +556,8 @@ networks = [
           'dns_nameservers': ['8.8.8.8', '8.8.4.4'],
           'allocation_pools': [
               {'start': '192.168.1.100', 'end': '192.168.1.254'}]
-          }]
+          }],
+     'map_to': 'another_shared_net'
      }
 ]
 """Networks to create/delete. Only one gateway can be assigned to router.
