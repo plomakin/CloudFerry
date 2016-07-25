@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and#
 # limitations under the License.
 
+import os
 import pprint
 import unittest
+import yaml
 
 from generator import generator, generate
 from nose.plugins.attrib import attr
 
+import cloudferry_devlab.tests.base as base
 from cloudferry_devlab.tests import functional_test
 
 
@@ -81,7 +84,7 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
             parameter=param)
 
     @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
-    @generate('name', 'external_gateway_info', 'status', 'admin_state_up',
+    @generate('name', 'status', 'admin_state_up',
               'routes')
     def test_migrate_neutron_routers(self, param):
         """Validate routers were migrated with correct parameters.
@@ -143,7 +146,7 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
                     self.validate_network_name_in_port_lists(
                         src_ports=src_ports, dst_ports=dst_ports)
 
-    @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
+    @attr(migrated_tenant=['tenant2'])
     def test_router_migrated_to_correct_tenant(self):
         """Validate routers were migrated to correct tenant on dst."""
         for dst_router in self.dst_routers:
@@ -172,16 +175,12 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
             src_sec_gr, dst_sec_gr, resource_name='security_groups',
             parameter=param)
 
-    @attr(migrated_tenant=['admin', 'tenant1', 'tenant2'])
+    @attr(migrated_tenant=['tenant1', 'tenant2'])
     def test_floating_ips_migrated(self):
         """Validate floating IPs were migrated correctly."""
 
-        def get_fips(client):
-            return set([fip['floating_ip_address']
-                        for fip in client.list_floatingips()['floatingips']])
-
         src_fips = self.filter_floatingips()
-        dst_fips = get_fips(self.dst_cloud.neutronclient)
+        dst_fips = self.get_fips(self.dst_cloud.neutronclient)
 
         missing_fips = src_fips - dst_fips
 
@@ -189,6 +188,42 @@ class NetrworkingMigrationTests(functional_test.FunctionalTest):
             self.fail("{num} floating IPs did not migrate to destination: "
                       "{fips}".format(num=len(missing_fips),
                                       fips=pprint.pformat(missing_fips)))
+
+    @attr(migrated_tenant=['admin'])
+    @generate('src', 'dst')
+    def test_mapped_floating_ips(self, param):
+        """Validate floating IPs were migrated accordingly `resource_map.yaml`
+        """
+
+        with open(os.path.join(self.cloudferry_dir,
+                               self.src_cloud.config.rsc_map_filename),
+                  'r') as f:
+            ext_net_map = yaml.load(f)['ext_network_map']
+
+        src_fips = self.filter_floatingips()
+        self.dst_cloud.switch_user(self.dst_cloud.username,
+                                   self.dst_cloud.password,
+                                   base.get_nosetest_cmd_attribute_val(
+                                       'migrated_tenant'))
+        dst_fips = self.get_fips(self.dst_cloud.neutronclient)
+        missed_fips = []
+
+        for src_net, dst_net in ext_net_map.items():
+            if param == 'src':
+                for src_fip in src_fips:
+                    fip = self.get_fip_by_ip(self.src_cloud.neutronclient,
+                                             src_fip)
+                    if fip.get('floating_network_id') != src_net:
+                        missed_fips.append(src_fip)
+            if param == 'dst':
+                for dst_fip in dst_fips:
+                    fip = self.get_fip_by_ip(self.dst_cloud.neutronclient,
+                                             dst_fip)
+                    if fip.get('floating_network_id') != dst_net:
+                        missed_fips.append(dst_fip)
+
+        if missed_fips:
+            self.fail(msg="Missed mapped fips: %s" % missed_fips)
 
     @unittest.skipIf(functional_test.get_option_from_config_ini(
         option='change_router_ips') == 'False',

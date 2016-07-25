@@ -16,8 +16,8 @@ from generator import generator, generate
 from nose.plugins.attrib import attr
 
 from cloudferry_devlab.tests import functional_test
-import cloudferry_devlab.tests.config as config
 import cloudferry_devlab.tests.base as base
+import cloudferry_devlab.tests.config as config
 
 
 @generator

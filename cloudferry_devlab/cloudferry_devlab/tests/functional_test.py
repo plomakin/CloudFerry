@@ -124,19 +124,17 @@ class FunctionalTest(unittest.TestCase):
     def filter_floatingips(self):
         # Now we create floating ip, after tenant networks created.
         # Will be fixed with tests for floating ip associating
-        def get_fips(_user):
+        def get_fips_by_user(_user):
             self.src_cloud.switch_user(user=_user['name'],
                                        tenant=_user['tenant'],
                                        password=_user['password'])
-            _client = self.src_cloud.neutronclient
-            return [_fip['floating_ip_address']
-                    for _fip in _client.list_floatingips()['floatingips']]
+            return self.get_fips(self.src_cloud.neutronclient)
 
         for tenant in config.tenants:
             fips = [fip for user in config.users
                     if tenant['name'] == user.get('tenant') and
                     user['enabled'] and not user.get('deleted')
-                    for fip in get_fips(user)]
+                    for fip in get_fips_by_user(user)]
             return set(fips)
 
     def filter_users(self):
@@ -410,3 +408,14 @@ class FunctionalTest(unittest.TestCase):
             finals_res_list[resource].append(
                 {param: res[param] for param in res if param in param_list})
         return finals_res_list
+
+    @staticmethod
+    def get_fips(client):
+        return set([fip['floating_ip_address']
+                    for fip in client.list_floatingips()['floatingips']])
+
+    @staticmethod
+    def get_fip_by_ip(client, ip):
+        for fip in client.list_floatingips()['floatingips']:
+            if fip.get('floating_ip_address') == ip:
+                return fip

@@ -1103,19 +1103,16 @@ class Prerequisites(base.BasePrerequisites):
                         conf.TIMEOUT)
 
     def create_ext_net_map_yaml(self):
-        src_ext_nets = [net['name'] for net in self.config.networks
+        src_ext_nets = [net for net in self.config.networks
                         if net.get('router:external')]
-        dst_ext_nets = [net['name'] for net in self.config.dst_networks
-                        if net.get('router:external')]
-        file_path = self.get_abs_path(self.config.ext_net_map)
-        with open(file_path, "w") as f:
+        with open(self.get_abs_path(self.config.rsc_map_filename), "a") as f:
             for src_net in src_ext_nets:
-                for dst_net in dst_ext_nets:
-                    if src_net == dst_net:
-                        src_net_id = self.get_net_id(src_net)
-                        dst_net_id = self.dst_cloud.get_net_id(dst_net)
-                        f.write('{src_net}: {dst_net}'.format(
-                                src_net=src_net_id, dst_net=dst_net_id))
+                if src_net.get('map_to'):
+                    src_net_id = self.get_net_id(src_net.get('name'))
+                    dst_net_id = self.dst_cloud.get_net_id(src_net.get(
+                        'map_to'))
+                    f.write('ext_network_map:\n {src_net}: {dst_net}'.format(
+                        src_net=src_net_id, dst_net=dst_net_id))
 
     def run_preparation_scenario(self):
         self.init_dst_cloud()
@@ -1156,7 +1153,7 @@ class Prerequisites(base.BasePrerequisites):
         self.update_filtering_file()
         self.log.info('Create all tenants filter file.')
         self.update_filtering_file(all_tenants_filter=True)
-        self.log.info('Update Tenant Resource Map')
+        self.log.info('Update tenant resource map')
         self.update_resource_map()
         self.log.info('Creating vm snapshots.')
         self.create_vm_snapshots()
