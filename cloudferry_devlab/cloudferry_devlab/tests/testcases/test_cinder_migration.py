@@ -33,7 +33,7 @@ class CinderMigrationTests(functional_test.FunctionalTest):
         self.dst_volume_list = self.dst_cloud.cinderclient.volumes.list(
             search_opts={'all_tenants': 1})
 
-    @attr(migrated_tenant='tenant2')
+    @attr(migrated_tenant='admin')
     @generate('display_name', 'size', 'bootable', 'metadata',
               'volume_image_metadata')
     def test_migrate_cinder_volumes(self, param):
@@ -71,7 +71,7 @@ class CinderMigrationTests(functional_test.FunctionalTest):
             src_volume_list, dst_volume_list, resource_name='volume',
             parameter=param)
 
-    @attr(migrated_tenant='tenant2')
+    @attr(migrated_tenant='admin')
     def test_migrate_cinder_volumes_data(self):
         """Validate volume data was migrated correctly.
 

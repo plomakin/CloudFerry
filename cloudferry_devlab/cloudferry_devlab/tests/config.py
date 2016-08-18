@@ -114,7 +114,7 @@ users = [
     {'name': 'user4', 'password': 'asaasdf', 'tenant': 'tenant2',
      'enabled': False},
     {'name': 'test_volume_migration', 'password': 'passwd', 'enabled': True,
-     'email': 'volume_test@example.com', 'tenant': 'tenant1', 'deleted': True},
+     'email': 'volume_test@example.com', 'tenant': 'admin', 'deleted': True},
     {'name': 'user5', 'password': 'passwd', 'email': 'asdasd@example.com',
      'tenant': 'tenant3', 'enabled': True},
     {'name': 'user6', 'password': 'passwd', 'email': 'testd@example.com',
@@ -245,14 +245,6 @@ tenants = [
               'cidr': '0.0.0.0/0'}]
           },
          {'name': 'sg12', 'description': 'Blah blah group2'}],
-     'cinder_volumes': [
-         {'display_name': 'tn1_volume1', 'size': 1,
-          'volume_type': 'nfs1',
-          'server_to_attach': 'tn1server1', 'device': '/dev/vdb'},
-         {'display_name': 'tn1_volume2', 'size': 1,
-          'volume_type': 'nfs2', 'metadata': {'tenant_data': 'tenant_rocks',
-                                              'enabled': "True", 'exists': ""}}
-         ],
      'cinder_snapshots': [
          # Commented because of unimplemented error in nfs driver for grizzly.
          # {'name': 'tn1snapsh', 'volume_id': 'tn1_volume2'}
@@ -270,9 +262,8 @@ tenants = [
          'subnet': 60
      },
      'vms': [
-         {'name': 'keypair_test_server', 'image': 'deleted_image',
-          'flavor': 'flavorname2', 'fip': True, 'key_name': 'key2',
-          'nics': [{'net-id': 'tenantnet2'}]}
+         {'name': 'suspended_server', 'image': 'deleted_image',
+          'flavor': 'flavorname2', 'nics': [{'net-id': 'tenantnet2'}]}
      ],
      'networks': [
          {'name': 'tenantnet2', 'admin_state_up': True,
@@ -285,15 +276,6 @@ tenants = [
          {'router': {'external_gateway_info': {}, 'name': 'tn2_router',
                      'admin_state_up': True}}
      ],
-     'cinder_volumes': [
-         {'display_name': 'tn_volume1', 'size': 1, 'volume_type': 'nfs1',
-          'server_to_attach': 'keypair_test_server', 'device': '/dev/vdb',
-          'mount_point': '/tmp/mount_here/',
-          'write_to_file': [
-              {'filename': 'test_data.txt', 'data': 'some useless string'},
-              {'filename': 'test/dir/test_data.txt',
-               'data': 'test data string'}]}
-         ],
      'images': [{'name': 'image9', 'copy_from': img_url, 'is_public': False}],
      'unassociated_fip': 3
      },
@@ -307,10 +289,6 @@ tenants = [
      'vms': [
          {'name': 'tn3server1', 'image': 'image1', 'flavor': 'flavorname1',
           'key_name': 'key4'}],
-     'cinder_volumes': [
-         {'display_name': 'tn3_volume1', 'size': 1,
-          'server_to_attach': 'tn3server1', 'device': '/dev/vdb'}],
-     'cinder_snapshots': [],
      'images': [{'name': 'image6', 'copy_from': img_url, 'is_public': False}],
      'flavors': [
          {'name': 'tn3fl1', 'disk': '1', 'ram': '64', 'vcpus': '1'}
@@ -401,9 +379,7 @@ tenants = [
               'to_port': '80',
               'cidr': '0.0.0.0/0'}]
           },
-         {'name': 'sg42', 'description': 'Tenant4 blah group2'}],
-     'cinder_volumes': [],
-     'cinder_snapshots': []
+         {'name': 'sg42', 'description': 'Tenant4 blah group2'}]
      },
     {'name': 'tenant5', 'description': 'Tenant5 exists on dst and src',
      'exists_on_dst': True, 'enabled': True,
@@ -661,8 +637,8 @@ vms = [
     {'name': 'server1', 'image': 'image1', 'flavor': 'flavorname1'},
     {'name': 'server2', 'image': 'deleted_on_dst', 'flavor': 'del_flvr',
      'server_group': 'admin_server_group', 'config_drive': True, 'fip': True},
-    {'name': 'server3', 'image': 'deleted_image', 'flavor': 'diffattrib_flvr',
-     'fip': True},
+    {'name': 'keypair_test_server', 'image': 'deleted_image',
+     'flavor': 'diffattrib_flvr', 'fip': True, 'key_name': 'key2'},
     {'name': 'server4', 'image': 'broken_image', 'flavor': 'flavorname2'},
     {'name': 'server5', 'image': 'image1', 'flavor': 'flavorname1',
      'broken': True},
@@ -708,14 +684,22 @@ cinder_volume_types = [
 """Cinder volume types to create"""
 
 cinder_volumes = [
-    {'display_name': 'cinder_volume1', 'size': 1, 'volume_type': 'nfs1'},
-    {'display_name': 'cinder_volume2', 'size': 1,
+    {'display_name': 'cinder_volume1', 'size': 1,
      'volume_type': 'nfs2',  'metadata': {'data': 'nope', 'enabled': "False"},
-     'server_to_attach': 'server2', 'device': '/dev/vdb'},
-    {'display_name': 'cinder_volume3', 'size': 1,
+     'server_to_attach': 'server1', 'device': '/dev/vdb',
      'user': 'test_volume_migration'},
     {'display_name': 'deleted_volume', 'size': 1, 'volume_type': 'nfs1',
-     'server_to_attach': 'server3', 'device': '/dev/vdb'}
+     'server_to_attach': 'server2', 'device': '/dev/vdb'},
+    {'display_name': 'tn1_volume2', 'size': 1, 'volume_type': 'nfs2',
+     'metadata': {'tenant_data': 'tenant_rocks',
+                  'enabled': "True", 'exists': ""}},
+    {'display_name': 'tn_volume1', 'size': 1, 'volume_type': 'nfs1',
+     'server_to_attach': 'keypair_test_server', 'device': '/dev/vdb',
+     'mount_point': '/tmp/mount_here/',
+     'write_to_file': [
+         {'filename': 'test_data.txt', 'data': 'some useless string'},
+         {'filename': 'test/dir/test_data.txt',
+          'data': 'test data string'}]}
 ]
 """Cinder images to create/delete.
 To write some date, use "write_to_file" parameter. Now only string could be
@@ -737,11 +721,11 @@ cinder_snapshots = [
 vm_states = [
     {'name': 'server1', 'state': 'ERROR'},
     {'name': 'server2', 'state': 'ACTIVE'},
-    {'name': 'server3', 'state': 'SUSPENDED'},
+    {'name': 'suspended_server', 'state': 'SUSPENDED'},
     {'name': 'server4', 'state': 'PAUSED'},
     {'name': 'server5', 'state': 'VERIFY_RESIZE'},
     {'name': 'not_in_filter', 'state': 'SHUTOFF'},
-    {'name': 'tn1server1', 'state': 'ACTIVE'},
+    {'name': 'tn1server1', 'state': 'SHUTOFF'},
     {'name': 'tn3server1', 'state': 'SHUTOFF'},
     {'name': 'tn5server1', 'state': 'SHUTOFF'},
     {'name': 'tn5server2', 'state': 'SHUTOFF'},
@@ -765,7 +749,7 @@ keypairs = [
         '+PB2nqu38DUemKU9WlZ9F5Fbhz7aVFDhBjvFNDw7w5nO7zeAFz2RbajJksQlHP62VmkW'
         'mTgu/otEuhM8GcjZIXlfHJtv0utMNfqQsNQ8qzt38OKXn/k2czmZX59DXomwdo3DUSmk'
         'SHym3kZtZPSTgT6GIGoWA1+QHlhx5kiMVEN+YRZF vagrant'},
-    {'name': 'key2', 'user': 'user2', 'public_key':
+    {'name': 'key2', 'user': 'admin', 'public_key':
         'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDtvUaRYdwzIBL+CpSayYfbeTtnZNps'
         'e/Fx1FAMX7DQBBD7aghNkbQMjVrdGpI7hOSJsU11Gmhl4/B3LFTu8oTUZNfz8nM+g0fT'
         'iZVICtvQUnB89xnH3RNYDBGFQKS3gOUtjvOb0oP9RVNELHftrGMnjJOQCLF+R0eG+Byc'

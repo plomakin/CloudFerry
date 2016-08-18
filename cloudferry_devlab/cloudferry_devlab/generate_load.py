@@ -117,6 +117,8 @@ class Prerequisites(base.BasePrerequisites):
             self.novaclient.security_groups.list()
             self.switch_user(user=self.username, password=self.password,
                              tenant=self.tenant)
+        self.config.users.append({'name': self.username, 'tenant': self.tenant,
+                                  'password': self.password})
 
     @clean_if_exists
     def create_roles(self):
@@ -730,6 +732,8 @@ class Prerequisites(base.BasePrerequisites):
                         if u['name'] == volume['user']][0]
                 self.switch_user(user=user['name'], password=user['password'],
                                  tenant=user['tenant'])
+            self.log.info("Creating volume %s.", volume.get('display_name',
+                                                            '{unknown}'))
             vlm = self.cinderclient.volumes.create(
                 **get_params_for_volume_creating(volume))
             # pylint: disable=no-member
